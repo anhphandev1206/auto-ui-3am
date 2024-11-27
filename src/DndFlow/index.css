@@ -1,15 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html,
 body {
   margin: 0;
   font-family: sans-serif;
   box-sizing: border-box;
 }
- 
+
 #app {
   width: 100vw;
   height: 100vh;
 }
- 
+
 .dndflow {
   flex-direction: column;
   display: flex;
@@ -28,11 +32,11 @@ body {
   font-size: 12px;
   background: #fcfcfc;
 }
- 
+
 .dndflow aside .description {
   margin-bottom: 10px;
 }
- 
+
 .dndflow .dndnode {
   height: 20px;
   padding: 4px;
@@ -44,7 +48,7 @@ body {
   align-items: center;
   cursor: grab;
 }
- 
+
 .dndflow .dndnode.block {
   border-color: red;
 }
@@ -52,17 +56,17 @@ body {
 .dndflow .dndnode.http {
   border-color: #0041d0;
 }
- 
+
 .dndflow .dndnode.click {
   border-color: aqua;
 }
- 
+
 .dndflow .reactflow-wrapper {
   flex-grow: 1;
   height: 100%;
 }
- 
-.dndflow .reactflow-wrapper .CEDFlow .btnCreate{
+
+.dndflow .reactflow-wrapper .CEDFlow .btnCreate {
   margin-top: 15px;
   margin-left: 15px;
 }
@@ -71,6 +75,7 @@ body {
   margin-top: 15px;
   margin-left: 15px;
 }
+
 .dndflow .reactflow-wrapper .CEDFlow .btnDelete {
   margin-top: 15px;
   margin-left: 15px;
@@ -79,24 +84,14 @@ body {
 .dndflow .selectall {
   margin-top: 10px;
 }
- 
+
 @media screen and (min-width: 768px) {
   .dndflow {
     flex-direction: row-reverse;
   }
- 
+
   .dndflow aside {
     width: 20%;
     max-width: 250px;
   }
-}
-.updatenode_control{
-  width: 12%;
-  padding: 20px;
-}
-input {
-  margin-top: 15px;  
-}
-.btn{
-  margin-top: 15px;
 }
