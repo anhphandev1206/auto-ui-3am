@@ -10,74 +10,112 @@ import {
   Background
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import {
+  BlockNode,
+  HTTPNode,
+  KeyPressNode
+} from "../CustomNode/index"
 
 import Sidebar from './Sidebar';
 import { DnDProvider, useDnD } from './DnDContext';
 import '@xyflow/react/dist/style.css';
 import './index.css';
-import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
-
+import { ACTION_TYPE, BLOCK, LOGIC, TYPE_KEY_PRESS } from '../common/constant.helper';
 const initialNodes = [
   {
-    id: '1',
+    id: LOGIC.BEFORE,
     type: 'block',
-    data: { label: 'block node' },
-    position: { x: 250, y: 5 },
+    data: { block: 1, nodes: [], expanded: true, id: LOGIC.BEFORE, label: 'Block node', description: '//Before browser opened' },
+    position: { x: 250, y: 0 },
+    sourcePosition: 'right',
+  },
+  {
+    id: LOGIC.MAIN,
+    type: 'block',
+    data: { block: 1, nodes: [], expanded: true, id: LOGIC.MAIN, label: 'Block node', description: '//Main logic' },
+    position: { x: 250, y: 100 },
+    sourcePosition: 'right',
+  },
+  {
+    id: LOGIC.AFTER,
+    type: 'block',
+    data: { block: 1, nodes: [], expanded: true, id: LOGIC.AFTER, label: 'Block node', description: '//After browser closed' },
+    position: { x: 250, y: 200 },
     sourcePosition: 'right',
   },
 ];
+
+const nodeTypes = { block: BlockNode, http: HTTPNode, keyPress: KeyPressNode };
 
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
 const DnDFlow = () => {
+
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  //const [sourcePos, setSourcePos] = useState('right');    
-
   const { screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
 
-  //Background
   const [varient, setVarient] = useState('lines');
 
-  //edit hook
-  const [editValue, setEditValue] = useState(nodes.data);
+  // Properties
+  const [nameNode, setNameNode] = useState('');
+  const [url, setUrl] = useState('');
+  const [key, setKey] = useState('');
   const [id, setID] = useState();
   const [selectedNode, setSelectedNode] = useState(null);
   //const [selectedEdge, setSelectedEdge] = useState(null); // Theo dõi edge được chọn
-  
   //function for edit
   const onNodeClick = (e, val) => {
     setSelectedNode(val);  // Lưu node được chọn
-    setEditValue(val.data.label);
+    setNameNode(val.data.label);
+    if (val.type == 'http') {
+      setUrl(val.data.url);
+      setKey('');
+    } else if (val.type == 'keyPress') {
+      setKey(val.data.key);
+      setUrl('');
+    }
     setID(val.id);
   }
 
-  //handle change function
-  const handleChange = (e) => {
+  const handleChangeName = (e) => {
     e.preventDefault();
-    setEditValue(e.target.value);
+    setNameNode(e.target.value);
+  }
+
+  const handleChangeUrl = (e) => {
+    e.preventDefault();
+    setUrl(e.target.value);
+  }
+
+  const handleChangeKey = (e) => {
+    e.preventDefault();
+    setKey(e.target.value);
   }
 
   const handleEdit = () => {
     const res = nodes.map((item) => {
       if (item.id === id) {
-        // Tạo một bản sao của item và chỉ cập nhật label trong data
         return {
-          ...item,  // sao chép toàn bộ item
+          ...item,
           data: {
-            ...item.data,  // sao chép dữ liệu của item
-            label: editValue  // thay đổi label
+            ...item.data,
+            label: nameNode,
+            url: url,
+            key: key,
           }
         };
       }
       return item;
     })
     setNodes(res);
-    setEditValue('');
+    setNameNode('');
+    setUrl('');
+    setKey('');
   }
 
   const onConnect = useCallback(
@@ -94,50 +132,50 @@ const DnDFlow = () => {
     (event) => {
       event.preventDefault();
 
-      // check if the dropped element is valid
       if (!type) {
         return;
       }
 
-      // project was renamed to screenToFlowPosition
-      // and you don't need to subtract the reactFlowBounds.left/top anymore
-      // details: https://reactflow.dev/whats-new/2023-11-10
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      // Tùy chỉnh các thuộc tính dựa trên nodeType
-      // let sourcePosition = 'right';
-      // let targetPosition = 'left';
+      let newNode = {
+        id: getId(),
+        type,
+        position,
+        data: { label: `${type} node`, },
+        sourcePosition: 'right',
+        targetPosition: 'left',
+      };
+      if (type == 'http') {
+        newNode = {
+          id: getId(),
+          type,
+          position,
+          data: { action_type: ACTION_TYPE.HTTP_REQUEST, label: `${type} node`, url, method: 'GET', headers: {}, data: {}, expanded: true, description: 'HTTP Request' },
+          sourcePosition: 'right',
+          targetPosition: 'left',
+        };
+      } else if (type == 'keyPress') {
+        newNode = {
+          id: getId(),
+          type,
+          position,
+          data: { action_type: ACTION_TYPE.KEY_PRESS, label: `${type} node`, key: 'Hello World', expanded: true, description: 'Key Press', type: TYPE_KEY_PRESS.SINGLE, xpath: '/html/body/div[1]/div[3]/form/div[1]/div[1]/div[1]/div/div[2]/textarea', delay: 0, delay_completion: 0 },
+          sourcePosition: 'right',
+          targetPosition: 'left',
+        };
+      }
 
-      if (type === 'output') {
-        const newNode = {
-          id: getId(),
-          type,
-          position,
-          data: { label: `${type} node` },
-          targetPosition: 'left',
-        };
-        setNodes((nds) => nds.concat(newNode));
-      }
-      else {
-        const newNode = {
-          id: getId(),
-          type,
-          position,
-          data: { label: `${type} node` },
-          sourcePosition: 'right',        // Thiết lập vị trí dựa vào điều kiện
-          targetPosition: 'left',
-        };
-        setNodes((nds) => nds.concat(newNode));
-      }
+      setNodes((nds) => nds.concat(newNode));
     },
     [screenToFlowPosition, type],
   );
 
   // Lắng nghe sự kiện bàn phím
-  useEffect(() => {    
+  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Delete' && selectedNode) {
         handleDeleteNode();  // Xóa node khi nhấn phím Delete
@@ -169,8 +207,73 @@ const DnDFlow = () => {
   const currentDate = new Date();
   // Hàm lưu flow vào file
   const saveFlowToFile = () => {
-    const flowData = { nodes, edges }; // Tạo dữ liệu flow
-    const blob = new Blob([JSON.stringify(flowData, null, 2)], { type: 'application/json' }); // Tạo blob từ JSON
+    const flowData = { nodes, edges };
+    const result = {
+      $type: "AUTO",
+      before_init: {
+        block: BLOCK.NORMAL,
+        nodes: [],
+        expanded: true,
+        id: LOGIC.BEFORE,
+        description: "Before browser opened"
+      },
+      main_logic: {
+        block: BLOCK.NORMAL,
+        nodes: [],
+        expanded: true,
+        id: LOGIC.MAIN,
+        description: "Main Logic"
+      },
+      after_quit: {
+        block: BLOCK.NORMAL,
+        nodes: [],
+        expanded: true,
+        id: LOGIC.AFTER,
+        description: "After browser closed"
+      }
+    }
+    const sources = edges.map(edge => edge.source);
+    let sourceMainLogic = LOGIC.MAIN;
+    const mainLogic = [];
+    while (sources.includes(sourceMainLogic)) {
+      const edge = edges.find(edge => edge.source == sourceMainLogic);
+      const node = nodes.find(node => node.id == edge.target);
+      sourceMainLogic = edge.target;
+      let newNode = {
+        id: node.id,
+        nodes: [],
+        expanded: true,
+        description: node.description,
+      }
+      if (node.type == 'http') {
+        newNode = {
+          id: node.id,
+          action_type: node.data.action_type,
+          url: node.data.url,
+          method: node.data.method,
+          headers: node.data.headers,
+          data: node.data.data,
+          expanded: true,
+          description: node.description,
+        }
+      } else if (node.type == 'keyPress') {
+        newNode = {
+          id: node.id,
+          action_type: node.data.action_type,
+          key: node.data.key,
+          expanded: true,
+          type: node.data.type,
+          xpath: node.data.xpath,
+          delay: node.data.delay,
+          delay_completion: node.data.delay_completion,
+          description: node.description,
+        }
+      }
+      mainLogic.push(newNode);
+    }
+    console.log(mainLogic);
+    result.main_logic.nodes = mainLogic;
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }); // Tạo blob từ JSON
     const url = URL.createObjectURL(blob); // Tạo URL cho file
     const link = document.createElement('a'); // Tạo một thẻ <a> ẩn
     link.href = url; // Đặt URL
@@ -205,44 +308,55 @@ const DnDFlow = () => {
   };
 
   return (
-      <div className="dndflow">        
-        <div className="updatenode_control" >
+    <div className="dndflow">
+      <div className="w-[20%] flex items-center flex-col p-4 gap-4">
+        <div>
           <label>Tên Node</label><br />
-          <input type='text' value={editValue} onChange={handleChange} /><br />
-          <button className='btn' onClick={handleEdit} >Update</button>
+          <input type='text' className="border-2 border-solid" value={nameNode} onChange={handleChangeName} /><br />
         </div>
-        <div className="App" style={{ width: "100%", height: "80vh" }}>
-          <div className="reactflow-wrapper" ref={reactFlowWrapper}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={(e, val) => onNodeClick(e, val)}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              fitView
-            >
-              <Background color='#99b3ec' variant={varient} />
-              <Controls />
-            </ReactFlow>
+        <div>
+          <label>URL</label><br />
+          <input type='text' className="border-2 border-solid" value={url} onChange={handleChangeUrl} /><br />
+        </div>
+        <div>
+          <label>Key</label><br />
+          <input type='text' className="border-2 border-solid" value={key} onChange={handleChangeKey} /><br />
+        </div>
+        <button className='border-2 border-solid' onClick={handleEdit} >Update</button>
+      </div>
+      <div className="App" style={{ width: "100%", height: "80vh" }}>
+        <div className="reactflow-wrapper" ref={reactFlowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodeClick={(e, val) => onNodeClick(e, val)}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            fitView
+          >
+            <Background color='#99b3ec' variant={varient} />
+            <Controls />
+          </ReactFlow>
 
-            <div className="CEDFlow" >
-              <button className='btnCreate' onClick={saveFlowToFile} >Lưu</button>
-              {/* <button className='btnEdit' onChange={loadFlowFromFile}>Load Flow</button> */}
-              <input type="file" className='btnEdit' onChange={loadFlowFromFile} /> {/* Input tải file */}
-              <button className='btnDelete' onClick={clearFlow}>Xóa</button>
-            </div>
-            
-            {/*Start Auto Run Script mở trang thì dùng route bên app.js */} 
-            {/* <Link to="/autorunscript">AutoRunScript</Link>  */}
-            <button onClick={goToAutoRunScript}>Đi đến AutoScript</button> 
-            {/*End Auto Run Script */}
+          <div className="CEDFlow" >
+            <button className='btnCreate' onClick={saveFlowToFile} >Lưu</button>
+            {/* <button className='btnEdit' onChange={loadFlowFromFile}>Load Flow</button> */}
+            <input type="file" className='btnEdit' onChange={loadFlowFromFile} /> {/* Input tải file */}
+            <button className='btnDelete' onClick={clearFlow}>Xóa</button>
           </div>
+
+          {/*Start Auto Run Script mở trang thì dùng route bên app.js */}
+          {/* <Link to="/autorunscript">AutoRunScript</Link>  */}
+          <button onClick={goToAutoRunScript}>Đi đến AutoScript</button>
+          {/*End Auto Run Script */}
         </div>
-        <Sidebar />  
-      </div> 
+      </div>
+      <Sidebar />
+    </div>
   );
 };
 
